@@ -76,6 +76,7 @@
                       <li class='verify-identity'>{{ verify-identity }}</li>
                   {{/group}}
                   <li class='disappearing-messages'>{{ disappearing-messages }}</li>
+	          <li class='export-messages'>{{ export-messages }}</li>
                   <li class='destroy'>{{ destroy }}</li>
               </ul>
             </div>
@@ -121,6 +122,23 @@
 
               </div>
           </form>
+      </div>
+    </div>
+  </script>
+  <script type='text/x-tmpl-mustache' id='conversation-static'>
+    <div class='conversation-header {{ avatar.color }}'>
+        <span class='conversation-title'>
+          {{ #name }}
+            <span class='conversation-name' dir='auto'>{{ name }}</span>
+          {{ /name }}
+          {{ #number }}
+            <span class='conversation-number'>{{ number }}</span>
+          {{ /number }}
+        </span>
+        {{> avatar }}
+    </div>
+    <div class='main panel'>
+      <div class='discussion-container'>
       </div>
     </div>
   </script>
@@ -170,6 +188,18 @@
             <span class='timestamp' data-timestamp={{ timestamp }}></span>
             <span class='status hide'></span>
             <span class='timer'></span>
+          </div>
+      </div>
+  </script>
+  <script type='text/x-tmpl-mustache' id='message-static'>
+      <div class='bubble {{ avatar.color }}'>
+          <div class='sender' dir='auto'>{{ sender }}</div>
+          <div class='attachments'></div>
+          <p class='content' dir='auto'>
+            {{ #message }}<span class='body'>{{ message }}</span>{{ /message }}
+          </p>
+          <div class='meta'>
+            <span class='timestamp' data-timestamp={{ timestamp }}></span>
           </div>
       </div>
   </script>

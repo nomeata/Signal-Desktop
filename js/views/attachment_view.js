@@ -115,6 +115,9 @@
             console.log('Failed to get window');
         }
     },
+    overrideURL: function(url) {
+        this.objectUrl = url;
+    },
     render: function() {
         var View;
         switch(this.contentType) {

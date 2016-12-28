@@ -94,4 +94,52 @@
             }
         },
     });
+
+    Whisper.MessageListStaticView = Whisper.ListView.extend({
+        tagName: 'ul',
+        className: 'message-list',
+        itemView: Whisper.MessageStaticView,
+        addOne: function(model) {
+            var view;
+            if (model.isExpirationTimerUpdate()) {
+                return; // ignore in export
+            } else if (model.get('type') === 'keychange') {
+                return; // ignore in export
+            } else {
+                view = new this.itemView({model: model}).render();
+            }
+            var index = this.collection.indexOf(model);
+            if (index === this.collection.length - 1) {
+                // add to the bottom.
+                this.$el.append(view.el);
+            } else if (index === 0) {
+                // add to top
+                this.$el.prepend(view.el);
+            } else {
+                // insert
+                var next = this.$('#' + this.collection.at(index + 1).id);
+                var prev = this.$('#' + this.collection.at(index - 1).id);
+                if (next.length > 0) {
+                    view.$el.insertBefore(next);
+                } else if (prev.length > 0) {
+                    view.$el.insertAfter(prev);
+                } else {
+                    // scan for the right spot
+                    var elements = this.$el.children();
+                    if (elements.length > 0) {
+                        for (var i = 0; i < elements.length; ++i) {
+                            var m = this.collection.get(elements[i].id);
+                            var m_index = this.collection.indexOf(m);
+                            if (m_index > index) {
+                                view.$el.insertBefore(elements[i]);
+                                break;
+                            }
+                        }
+                    } else {
+                        this.$el.append(view.el);
+                    }
+                }
+            }
+        },
+    });
 })();

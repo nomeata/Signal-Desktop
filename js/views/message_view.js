@@ -278,4 +278,53 @@
         }
     });
 
+    Whisper.MessageStaticView = Whisper.View.extend({
+        tagName:   'li',
+        templateName: 'message-static',
+        id: function() {
+            return this.model.id;
+        },
+        initialize: function() {
+            this.timeStampView = new Whisper.TimestampStaticView();
+
+            this.contact = this.model.isIncoming() ? this.model.getContact() : null;
+        },
+        className: function() {
+            return ['entry', this.model.get('type')].join(' ');
+        },
+        render: function() {
+            var contact = this.model.isIncoming() ? this.model.getContact() : null;
+            this.$el.html(
+                Mustache.render(_.result(this, 'template', ''), {
+                    message: this.model.get('body'),
+                    timestamp: this.model.get('sent_at'),
+                    sender: (contact && contact.getTitle()) || '',
+                    avatar: (contact && contact.getAvatar()),
+                }, this.render_partials())
+            );
+            this.timeStampView.setElement(this.$('.timestamp'));
+            this.timeStampView.update();
+
+            var body = this.$('.body');
+
+            if (body.length > 0) {
+                var escaped = body.html();
+                body.html(escaped.replace(/\n/g, '<br>').replace(URL_REGEX, "$1<a href='$2' target='_blank'>$2</a>"));
+            }
+
+            this.loadAttachments();
+
+            return this;
+        },
+        loadAttachments: function() {
+            this.model.get('attachments').forEach(function(attachment, idx) {
+                var url = 'media/'+ this.model.id + '-' + idx;
+                var view = new Whisper.AttachmentView({ model: attachment });
+                view.overrideURL(url);
+                this.$('.attachments').append(view.el);
+                view.render();
+            }.bind(this));
+        }
+    });
+
 })();

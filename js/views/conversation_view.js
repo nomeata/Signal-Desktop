@@ -132,6 +132,7 @@
             'keydown .send-message': 'updateMessageFieldSize',
             'click .destroy': 'destroyMessages',
             'click .end-session': 'endSession',
+            'click .export-messages': 'exportMessages',
             'click .leave-group': 'leaveGroup',
             'click .update-group': 'newGroupUpdate',
             'click .verify-identity': 'verifyIdentity',
@@ -331,6 +332,73 @@
             this.$('.menu-list').hide();
         },
 
+        exportMessages: function(e) {
+          var conversation_view = this;
+
+          this.window.chrome.fileSystem.chooseEntry( {
+              type: 'saveFile',
+              suggestedName: 'signal.zip',
+                accepts: [ { description: 'Zip files (*.zip)',
+                             extensions: ['zip']} ],
+                acceptsAllTypes: true
+              }, function (fileEntry) {
+                var shadow_view = new Whisper.ConversationStaticView({
+                    model: conversation_view.model,
+                    window: conversation_view.window
+                });
+
+                var export_doc = $('<html>')
+                        .append($('<head>')
+                            .append($('<link href="stylesheets/manifest.css" rel="stylesheet" type="text/css"/>'))
+                            .append($('<meta charset="utf-8"/>'))
+                            .append($('<meta content="width=device-width, user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>'))
+                            .append($('<meta name="viewport" content="width=device-width, initial-scale=1"/>'))
+                            .append($('<title>Signal</title>')))
+                        .append($('<body>').toggleClass('android')
+                            .append(shadow_view.el));
+
+                var conversation_source = export_doc[0].outerHTML;
+
+                var mediablobs = conversation_view.model.messageCollection
+                    .chain()
+                    .map(function (message) {
+                        return message.get('attachments').map(function (attachment,idx) {
+                            var url = 'media/'+ message.id + '-' + idx;
+                            return {
+                                url: url,
+                                blob: new Blob([attachment.data], {type: attachment.contentType})
+                           };
+                        });
+                    })
+                    .flatten()
+                    .value();
+
+                  zip.workerScriptsPath = '/components/zip.js/WebContent/';
+                  zip.createWriter(new zip.FileWriter(fileEntry,"application/zip"), function(writer) {
+                    writer.add("index.html", new zip.TextReader(conversation_source), function() {
+                      chrome.runtime.getPackageDirectoryEntry(function (packageDir) {
+                          packageDir.getFile('stylesheets/manifest.css',{},function (fileEntry) {
+                              fileEntry.file(function (blob) {
+                                  writer.add("stylesheets/manifest.css", new zip.BlobReader(blob), function() {
+                                    writer.add(mediablobs[0].url, new zip.BlobReader(mediablobs[0].blob), function() {
+                                      writer.close(function(file) {
+                                        // done
+                                        console.log('Export successful');
+                                      });
+                                    });
+                                  });
+                              });
+                          }, function (error) {console.warn(error);});
+                      });
+                    }, function(currentIndex, totalIndex) {
+                      // onprogress callback
+                    }, function(error) {
+                      // onerror callback
+                  });
+              });
+          });
+        },
+
         sendMessage: function(e) {
             var toast;
             if (extension.expired()) {
@@ -426,4 +494,35 @@
             return (this.$el.css('display') === 'none') || this.$('.panel').css('display') === 'none';
         }
     });
+
+    Whisper.ConversationStaticView = Whisper.View.extend({
+        className: function() {
+            return [ 'conversation', this.model.get('type') ].join(' ');
+        },
+        id: function() {
+            return 'conversation-' + this.model.cid;
+        },
+        template: $('#conversation-static').html(),
+        render_attributes: function() {
+            return {
+                group: this.model.get('type') === 'group',
+                name: this.model.getName(),
+                number: this.model.getNumber(),
+                avatar: this.model.getAvatar(),
+            };
+        },
+        initialize: function(options) {
+            this.render();
+
+            this.window = options.window;
+            this.view = new Whisper.MessageListStaticView({
+                collection: this.model.messageCollection,
+                window: this.window
+            });
+            this.$('.discussion-container').append(this.view.el);
+            this.view.render();
+
+        },
+    });
+
 })();

@@ -94,4 +94,14 @@
             d: "ddd LT"
         }
     });
+    Whisper.TimestampStaticView = Whisper.View.extend({
+        update: function() {
+            var millis = this.$el.data('timestamp');
+            if (millis === "") {
+                return;
+            }
+            var timestamp = moment(millis);
+            this.$el.text(timestamp.format('llll'));
+        },
+    });
 })();
