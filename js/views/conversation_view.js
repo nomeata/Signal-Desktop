@@ -456,13 +456,14 @@
             };
         },
         initialize: function(options) {
-            this.render();
-
             this.window = options.window;
             this.view = new Whisper.MessageListStaticView({
                 collection: this.model.messageCollection,
                 window: this.window
             });
+        },
+        render: function() {
+            Whisper.View.prototype.render.apply(this, arguments);
             this.$('.discussion-container').append(this.view.el);
             this.view.render();
 

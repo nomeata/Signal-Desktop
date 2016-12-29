@@ -106,7 +106,7 @@
             } else if (model.get('type') === 'keychange') {
                 return; // ignore in export
             } else {
-                view = new this.itemView({model: model}).render();
+                view = new this.itemView({model: model});
             }
             var index = this.collection.indexOf(model);
             if (index === this.collection.length - 1) {
@@ -140,6 +140,7 @@
                     }
                 }
             }
+            view.render(); // Render after adding to the DOM!
         },
     });
 })();

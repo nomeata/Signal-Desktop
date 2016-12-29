@@ -26,18 +26,19 @@
                     window: archiver.window
                 });
 
-                var export_doc = $('<html>')
-                        .append($('<head>')
-                            .append($('<link href="stylesheets/manifest.css" rel="stylesheet" type="text/css"/>'))
-                            .append($('<meta charset="utf-8"/>'))
-                            .append($('<meta content="width=device-width, user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>'))
-                            .append($('<meta name="viewport" content="width=device-width, initial-scale=1"/>'))
-                            .append($('<title>Signal</title>')))
-                        .append($('<body>').toggleClass('android')
-                            .append(shadow_view.el));
+		var export_doc = $('<html>')
+		    .append($('<head>')
+			.append($('<link href="stylesheets/manifest.css" rel="stylesheet" type="text/css"/>'))
+			.append($('<meta charset="utf-8"/>'))
+			.append($('<meta content="width=device-width, user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>'))
+			.append($('<meta name="viewport" content="width=device-width, initial-scale=1"/>'))
+			.append($('<title>Signal</title>')))
+		    .append($('<body>').toggleClass('android')
+			.append(shadow_view.el));
+
+		shadow_view.render();
 
                 var conversation_source = export_doc[0].outerHTML;
-
                 var mediablobs = archiver.conversation.messageCollection
                     .chain()
                     .map(function (message) {
@@ -60,7 +61,6 @@
                           packageDir.getFile('stylesheets/manifest.css',{},function (fileEntry) {
                               fileEntry.file(function (blob) {
                                   writer.add("stylesheets/manifest.css", new zip.BlobReader(blob), function() {
-				    console.log(mediablobs[0].date);
                                     writer.add(mediablobs[0].url, new zip.BlobReader(mediablobs[0].blob), function() {
                                       writer.close(function(file) {
                                         onSuccess();
