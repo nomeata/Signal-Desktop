@@ -70,6 +70,7 @@
                 'destroy'         : i18n('deleteMessages'),
                 'send-message'    : i18n('sendMessage'),
                 'disappearing-messages': i18n('disappearingMessages'),
+                'export-messages':  i18n('exportMessages'),
                 timer_options     : Whisper.ExpirationTimerOptions.models
             };
         },

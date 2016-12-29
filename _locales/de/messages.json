@@ -73,6 +73,10 @@
         "message": "Verschlüsselung neu starten",
         "description": "This is a menu item for resetting the session, using the imperative case, as in a command."
     },
+    "exportMessages": {
+        "message": "Nachrichtenarchiv exportieren",
+        "description": "This is a menu item for exporting all messages including media, using the imperative case, as in a command."
+    },
     "welcomeToSignal": {
         "message": "Willkommen bei Signal",
         "description": ""
