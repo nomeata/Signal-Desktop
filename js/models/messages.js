@@ -130,6 +130,7 @@
                     'audio/ogg':  '.ogg',
                     'audio/wav':  '.wav',
                     'audio/mpeg': '.mp3',
+                    'audio/aac':  '.adts',
                     'video/mp4':  '.mpg',
                 }[attachment.contentType] || '';
             return 'media/'+ this.id + '-' + idx + suffix;
