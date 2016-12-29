@@ -334,7 +334,7 @@
 
         exportMessages: function(e) {
             var exporter = new Whisper.ExportArchive({
-                conversation: this.model,
+                conversation: this.model.id,
                 window: this.window,
             });
             exporter.export(function (){
