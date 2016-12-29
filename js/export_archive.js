@@ -6,7 +6,6 @@
         var id = options.conversation;
         this.conversation = new Whisper.Conversation({id: id});
         this.conversation.fetch();
-        this.conversation.fetchMessages(Number.MAX_SAFE_INTEGER);
         this.window = options.window;
     }
 
@@ -15,6 +14,7 @@
         export: function(onSuccess, onError) {
           this.onSuccess = onSuccess;
           this.onError = onError;
+
           this.pickFilename();
         },
 
@@ -26,6 +26,38 @@
                              extensions: ['zip']} ],
                 acceptsAllTypes: true
               }, this.start_export.bind(this));
+        },
+
+        start_export: function (fileEntry) {
+          zip.workerScriptsPath = '/components/zip.js/WebContent/';
+          zip.createWriter(new zip.FileWriter(fileEntry,"application/zip"), function(writer) {
+            this.writer = writer;
+            this.addStaticFiles();
+          }.bind(this),
+          function(currentIndex, totalIndex) {
+            // onprogress callback
+          }.bind(this),
+          self.onError);
+        },
+
+        addStaticFiles: function() {
+          chrome.runtime.getPackageDirectoryEntry(function (packageDir) {
+            packageDir.getFile('stylesheets/manifest.css',{},function (fileEntry) {
+             fileEntry.file(function (blob) {
+                this.writer.add("stylesheets/manifest.css", new zip.BlobReader(blob), function() {
+                  this.fetch_messages();
+                }.bind(this));
+              }.bind(this));
+            }.bind(this),
+            function (error) {
+              console.warn(error);
+            }.bind(this));
+          }.bind(this));
+        },
+
+        fetch_messages: function() {
+          this.conversation.fetchMessages(Number.MAX_SAFE_INTEGER)
+            .then(this.add_messages.bind(this));
         },
 
         conversation_source: function() {
@@ -48,35 +80,7 @@
 
                 return  export_doc[0].outerHTML;
         },
-
-        start_export: function (fileEntry) {
-          zip.workerScriptsPath = '/components/zip.js/WebContent/';
-          zip.createWriter(new zip.FileWriter(fileEntry,"application/zip"), function(writer) {
-            this.writer = writer;
-            this.addStaticFiles();
-          }.bind(this),
-          function(currentIndex, totalIndex) {
-            // onprogress callback
-          }.bind(this),
-          self.onError);
-        },
-
-        addStaticFiles: function() {
-          chrome.runtime.getPackageDirectoryEntry(function (packageDir) {
-            packageDir.getFile('stylesheets/manifest.css',{},function (fileEntry) {
-             fileEntry.file(function (blob) {
-                this.writer.add("stylesheets/manifest.css", new zip.BlobReader(blob), function() {
-                  this.addMessages();
-                }.bind(this));
-              }.bind(this));
-            }.bind(this),
-            function (error) {
-              console.warn(error);
-            }.bind(this));
-          }.bind(this));
-        },
-
-        addMessages: function() {
+        add_messages: function() {
           this.writer.add("index.html", new zip.TextReader(this.conversation_source()), function() {
             this.addAllMedia();
           }.bind(this));
