@@ -122,6 +122,17 @@
             }
             return this.imageUrl;
         },
+        getStaticAttachmentUrl: function (attachment, idx) {
+            var suffix = {
+                    'image/jpeg': '.jpg',
+                    'image/png':  '.png',
+                    'image/bmp':  '.bmp',
+                    'audio/ogg':  '.ogg',
+                    'audio/wav':  '.wav',
+                    'audio/mpeg': '.mp3',
+                }[attachment.contentType] || '';
+            return 'media/'+ this.id + '-' + idx + suffix;
+        },
         getConversation: function() {
             return ConversationController.add({
                 id: this.get('conversationId')

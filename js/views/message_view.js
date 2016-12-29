@@ -318,7 +318,7 @@
         },
         loadAttachments: function() {
             this.model.get('attachments').forEach(function(attachment, idx) {
-                var url = 'media/'+ this.model.id + '-' + idx;
+                var url = this.model.getStaticAttachmentUrl(attachment,idx);
                 var view = new Whisper.AttachmentView({ model: attachment });
                 view.overrideURL(url);
                 this.$('.attachments').append(view.el);

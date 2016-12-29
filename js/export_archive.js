@@ -42,10 +42,11 @@
                     .chain()
                     .map(function (message) {
                         return message.get('attachments').map(function (attachment,idx) {
-                            var url = 'media/'+ message.id + '-' + idx;
+	                    var url = message.getStaticAttachmentUrl(attachment,idx);
                             return {
                                 url: url,
-                                blob: new Blob([attachment.data], {type: attachment.contentType})
+                                blob: new Blob([attachment.data], {type: attachment.contentType}),
+				timestamp: message.get('sent_at'),
                            };
                         });
                     })
@@ -59,11 +60,16 @@
                           packageDir.getFile('stylesheets/manifest.css',{},function (fileEntry) {
                               fileEntry.file(function (blob) {
                                   writer.add("stylesheets/manifest.css", new zip.BlobReader(blob), function() {
+				    console.log(mediablobs[0].date);
                                     writer.add(mediablobs[0].url, new zip.BlobReader(mediablobs[0].blob), function() {
                                       writer.close(function(file) {
                                         onSuccess();
                                       });
-                                    });
+                                    },
+				    null,
+				    { level: 0,
+				      lastModDate: new Date(mediablobs[0].timestamp)
+				    });
                                   });
                               });
                           }, function (error) {console.warn(error);});
