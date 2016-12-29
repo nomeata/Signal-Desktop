@@ -6,7 +6,7 @@
 	var id = options.conversation;
 	this.conversation = new Whisper.Conversation({id: id});
 	this.conversation.fetch();
-	this.conversation.fetchMessages();
+	this.conversation.fetchMessages(Number.MAX_SAFE_INTEGER);
 	this.window = options.window;
     }
 

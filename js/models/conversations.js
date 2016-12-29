@@ -315,9 +315,9 @@
         }
     },
 
-    fetchMessages: function() {
+    fetchMessages: function(limit) {
         if (!this.id) { return false; }
-        return this.messageCollection.fetchConversation(this.id);
+        return this.messageCollection.fetchConversation(this.id,limit);
     },
 
     fetchContacts: function(options) {
