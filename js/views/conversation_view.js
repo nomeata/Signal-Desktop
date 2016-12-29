@@ -340,6 +340,8 @@
             });
             exporter.export(function (){
                 console.log('Export done');
+            }, function (error) {
+                console.log('Export failed', error);
             });
         },
 
