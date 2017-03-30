@@ -108,6 +108,8 @@
             } else {
                 view = new this.itemView({model: model});
             }
+            this.$el.prepend(view.el);
+            /*
             var index = this.collection.indexOf(model);
             if (index === this.collection.length - 1) {
                 // add to the bottom.
@@ -140,6 +142,7 @@
                     }
                 }
             }
+            */
             view.render(); // Render after adding to the DOM!
         },
     });
