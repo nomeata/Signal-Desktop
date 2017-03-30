@@ -95,6 +95,7 @@
         }.bind(this));},
 
         add_all_media: function() {return new Promise(function(resolve,reject){
+	  console.log('add_all_media');
           return this.conversation.messageCollection
               .chain()
               .map(function (message) {
@@ -112,6 +113,7 @@
         }.bind(this));},
 
         add_media: function(options, resolve) {
+	  console.log('add_media', options.url);
           var blob = new Blob([options.data], {type: options.contentType});
           this.writer.add(
             options.url,
@@ -124,6 +126,7 @@
         },
 
         done: function() {return new Promise(function(resolve,reject){
+	  console.log('done');
           this.writer.close(resolve);
         }.bind(this));},
     };
