@@ -134,11 +134,12 @@ var TextSecureServer = (function() {
         accounts   : "v1/accounts",
         devices    : "v1/devices",
         keys       : "v2/keys",
+        signed     : "v2/keys/signed",
         messages   : "v1/messages",
         attachment : "v1/attachments"
     };
 
-    function TextSecureServer(url, ports, username, password, attachment_server_url) {
+    function TextSecureServer(url, ports, username, password) {
         if (typeof url !== 'string') {
             throw new Error('Invalid server url');
         }
@@ -146,17 +147,6 @@ var TextSecureServer = (function() {
         this.url = url;
         this.username = username;
         this.password = password;
-
-        this.attachment_id_regex = RegExp("^https:\/\/.*\/(\\d+)\?");
-        if (attachment_server_url) {
-            // strip trailing /
-            attachment_server_url = attachment_server_url.replace(/\/$/,'');
-            // and escape
-            attachment_server_url = attachment_server_url.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            this.attachment_id_regex = RegExp( "^" + attachment_server_url + "\/(\\d+)\?");
-        }
-
-
     }
 
     TextSecureServer.prototype = {
@@ -291,6 +281,17 @@ var TextSecureServer = (function() {
                 jsonData            : keys,
             });
         },
+        setSignedPreKey: function(signedPreKey) {
+            return this.ajax({
+                call                : 'signed',
+                httpType            : 'PUT',
+                jsonData            : {
+                    keyId: signedPreKey.keyId,
+                    publicKey: btoa(getString(signedPreKey.publicKey)),
+                    signature: btoa(getString(signedPreKey.signature))
+                }
+            });
+        },
         getMyKeys: function(number, deviceId) {
             return this.ajax({
                 call                : 'keys',
@@ -315,14 +316,19 @@ var TextSecureServer = (function() {
                 }
                 res.identityKey = StringView.base64ToBytes(res.identityKey);
                 res.devices.forEach(function(device) {
-                    if ( !validateResponse(device, {signedPreKey: 'object', preKey: 'object'}) ||
-                         !validateResponse(device.signedPreKey, {publicKey: 'string', signature: 'string'}) ||
-                         !validateResponse(device.preKey, {publicKey: 'string'})) {
-                        throw new Error("Invalid response");
+                    if ( !validateResponse(device, {signedPreKey: 'object'}) ||
+                         !validateResponse(device.signedPreKey, {publicKey: 'string', signature: 'string'}) ) {
+                        throw new Error("Invalid signedPreKey");
+                    }
+                    if ( device.preKey ) {
+                        if ( !validateResponse(device, {preKey: 'object'}) ||
+                             !validateResponse(device.preKey, {publicKey: 'string'})) {
+                            throw new Error("Invalid preKey");
+                        }
+                        device.preKey.publicKey = StringView.base64ToBytes(device.preKey.publicKey);
                     }
                     device.signedPreKey.publicKey = StringView.base64ToBytes(device.signedPreKey.publicKey);
                     device.signedPreKey.signature = StringView.base64ToBytes(device.signedPreKey.signature);
-                    device.preKey.publicKey       = StringView.base64ToBytes(device.preKey.publicKey);
                 });
                 return res;
             });
@@ -344,11 +350,6 @@ var TextSecureServer = (function() {
                 urlParameters       : '/' + id,
                 validateResponse    : {location: 'string'}
             }).then(function(response) {
-                var match = response.location.match(this.attachment_id_regex);
-                if (!match) {
-                    console.log('Invalid attachment url for incoming message', response.location);
-                    throw new Error('Received invalid attachment url');
-                }
                 return ajax(response.location, {
                     type        : "GET",
                     responseType: "arraybuffer",
@@ -361,20 +362,13 @@ var TextSecureServer = (function() {
                 call     : 'attachment',
                 httpType : 'GET',
             }).then(function(response) {
-                // Extract the id as a string from the location url
-                // (workaround for ids too large for Javascript numbers)
-                var match = response.location.match(this.attachment_id_regex);
-                if (!match) {
-                    console.log('Invalid attachment url for outgoing message', response.location);
-                    throw new Error('Received invalid attachment url');
-                }
                 return ajax(response.location, {
                     type        : "PUT",
                     contentType : "application/octet-stream",
                     data        : encryptedBin,
                     processData : false,
                 }).then(function() {
-                    return match[1];
+                    return response.idString;
                 }.bind(this));
             }.bind(this));
         },

@@ -101,7 +101,6 @@ module.exports = function(grunt) {
         'manifest.json',
         'background.html',
         'index.html',
-        'conversation.html',
         'options.html',
         '_locales/**',
         'protos/*',
@@ -110,6 +109,7 @@ module.exports = function(grunt) {
         '!js/register.js'
       ],
       res: [
+        'audio/**',
         'images/**',
         'fonts/*',
       ]
@@ -125,9 +125,7 @@ module.exports = function(grunt) {
             if (srcpath.match('background.js')) {
               return content.replace(
                 /textsecure-service-staging.whispersystems.org/g,
-                'textsecure-service-ca.whispersystems.org').replace(
-                /whispersystems-textsecure-attachments-staging.s3.amazonaws.com/g,
-                'whispersystems-textsecure-attachments.s3.amazonaws.com');
+                'textsecure-service-ca.whispersystems.org');
             } else if (srcpath.match('expire.js')) {
               var gitinfo = grunt.config.get('gitinfo');
               var commited = gitinfo.local.branch.current.lastCommitTime;

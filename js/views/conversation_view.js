@@ -32,8 +32,10 @@
         },
         setTimer: function(e) {
             var seconds = this.$(e.target).data().seconds;
-            if (seconds >= 0) {
+            if (seconds > 0) {
                 this.model.updateExpirationTimer(seconds);
+            } else {
+                this.model.updateExpirationTimer(null);
             }
         },
         render: function() {
@@ -79,6 +81,7 @@
             this.listenTo(this.model, 'change:color', this.updateColor);
             this.listenTo(this.model, 'change:name', this.updateTitle);
             this.listenTo(this.model, 'newmessage', this.addMessage);
+            this.listenTo(this.model, 'delivered', this.updateMessage);
             this.listenTo(this.model, 'opened', this.onOpened);
             this.listenTo(this.model, 'expired', this.onExpired);
             this.listenTo(this.model.messageCollection, 'expired', this.onExpiredCollection);
@@ -226,6 +229,7 @@
             }
         },
         onExpiredCollection: function(message) {
+            console.log('removing message', message.get('sent_at'), 'from collection');
             this.model.messageCollection.remove(message.id);
         },
 
@@ -236,6 +240,9 @@
             if (!this.isHidden() && window.isFocused()) {
                 this.markRead();
             }
+        },
+        updateMessage: function(message) {
+            this.model.messageCollection.add(message, {merge: true});
         },
 
         viewMembers: function() {
