@@ -72,7 +72,7 @@
 
         fetch_messages: function() {
 	  console.log('fetch_messages');
-          return this.conversation.fetchMessages(10000); // Number.MAX_SAFE_INTEGER);
+          return this.conversation.fetchMessages(5000); // Number.MAX_SAFE_INTEGER);
         },
 
         conversation_source: function() {
