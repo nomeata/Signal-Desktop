@@ -26,6 +26,7 @@
         },
 
         pickFilename: function() {return new Promise(function(resolve){
+	    console.log('pickFilename');
             this.window.chrome.fileSystem.chooseEntry( {
                 type: 'saveFile',
                 suggestedName: 'signal.zip',
@@ -36,6 +37,7 @@
         }.bind(this));},
 
         start_export: function (fileEntry) {return new Promise(function(resolve,reject){
+	    console.log('start_export');
             zip.workerScriptsPath = '/components/zip.js/WebContent/';
             zip.createWriter(new zip.FileWriter(fileEntry,"application/zip"), function(writer) {
               this.writer = writer;
@@ -50,6 +52,7 @@
         }.bind(this));},
 
         add_static_files: function() {return new Promise(function(resolve,reject){
+	  console.log('add_static_files');
           chrome.runtime.getPackageDirectoryEntry(function (packageDir) {
             packageDir.getFile(
               'stylesheets/manifest.css',
@@ -68,7 +71,8 @@
         }.bind(this));},
 
         fetch_messages: function() {
-          return this.conversation.fetchMessages(Number.MAX_SAFE_INTEGER);
+	  console.log('fetch_messages');
+          return this.conversation.fetchMessages(2000); // Number.MAX_SAFE_INTEGER);
         },
 
         conversation_source: function() {
@@ -93,6 +97,7 @@
         },
 
         add_messages: function() {return new Promise(function(resolve,reject){
+	  console.log('add_messages');
           this.writer.add("index.html", new zip.TextReader(this.conversation_source()), resolve);
         }.bind(this));},
 
@@ -117,6 +122,7 @@
         add_media: function(options, resolve) {
 	  console.log('add_media', options.url);
           var blob = new Blob([options.data], {type: options.contentType});
+	  console.log('blob created');
           this.writer.add(
             options.url,
             new zip.BlobReader(blob),
