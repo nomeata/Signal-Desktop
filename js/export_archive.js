@@ -44,7 +44,9 @@
             function(currentIndex, totalIndex) {
               // onprogress callback
             }.bind(this),
-            reject);
+            function(err){
+		console.log('zip.js reports error:', err);
+	    }.bind(this));
         }.bind(this));},
 
         add_static_files: function() {return new Promise(function(resolve,reject){
