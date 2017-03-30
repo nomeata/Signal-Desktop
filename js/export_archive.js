@@ -93,7 +93,7 @@
 
           shadow_view.render();
 
-          return  export_doc[0].outerHTML;
+          return  export_doc[0].outerHTML.replace(/invalid:\/\//g,'');
         },
 
         add_messages: function() {return new Promise(function(resolve,reject){

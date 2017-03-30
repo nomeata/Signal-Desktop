@@ -133,7 +133,7 @@
                     'audio/aac':  '.adts',
                     'video/mp4':  '.mpg',
                 }[attachment.contentType] || '';
-            return 'media/'+ this.id + '-' + idx + suffix;
+            return 'invalid://media/'+ this.id + '-' + idx + suffix;
         },
         getConversation: function() {
             return ConversationController.add({
