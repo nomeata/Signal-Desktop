@@ -35855,32 +35855,14 @@ Internal.SessionRecord = function() {
         archiveCurrentState: function() {
             var open_session = this.getOpenSession();
             if (open_session !== undefined) {
-                this.closeSession(open_session);
+                console.log('closing session');
+                open_session.indexInfo.closed = Date.now();
                 this.updateSessionState(open_session);
             }
         },
-        closeSession: function(session) {
-            if (session.indexInfo.closed > -1) {
-                return;
-            }
-            console.log('closing session', session.indexInfo.baseKey);
-
-            // After this has run, we can still receive messages on ratchet chains which
-            // were already open (unless we know we dont need them),
-            // but we cannot send messages or step the ratchet
-
-            // Delete current sending ratchet
-            delete session[util.toString(session.currentRatchet.ephemeralKeyPair.pubKey)];
-            // Move all receive ratchets to the oldRatchetList to mark them for deletion
-            for (var i in session) {
-                if (session[i].chainKey !== undefined && session[i].chainKey.key !== undefined) {
-                    session.oldRatchetList[session.oldRatchetList.length] = {
-                        added: Date.now(), ephemeralKey: i
-                    };
-                }
-            }
-            session.indexInfo.closed = Date.now();
-            this.removeOldChains(session);
+        promoteState: function(session) {
+            console.log('promoting session');
+            session.indexInfo.closed = -1;
         },
         removeOldChains: function(session) {
             // Sending ratchets are always removed when we step because we never need them again
@@ -36313,6 +36295,10 @@ SessionCipher.prototype = {
     return this.doDecryptWhisperMessage(buffer, session).then(function(plaintext) {
         return { plaintext: plaintext, session: session };
     }).catch(function(e) {
+        if (e.name === 'MessageCounterError') {
+            return Promise.reject(e);
+        }
+
         errors.push(e);
         return this.decryptWithSessionList(buffer, sessionList, errors);
     }.bind(this));
@@ -36328,6 +36314,10 @@ SessionCipher.prototype = {
             var errors = [];
             return this.decryptWithSessionList(buffer, record.getSessions(), errors).then(function(result) {
                 return this.getRecord(address).then(function(record) {
+                    if (result.session.indexInfo.baseKey !== record.getOpenSession().indexInfo.baseKey) {
+                      record.archiveCurrentState();
+                      record.promoteState(result.session);
+                    }
                     record.updateSessionState(result.session);
                     return this.storage.storeSession(address, record.serialize()).then(function() {
                         return result.plaintext;
@@ -36758,7 +36748,7 @@ Internal.SessionLock.queueJobForNumber = function queueJobForNumber(number, runJ
             var mac = encryptedBin.slice(encryptedBin.byteLength - 32, encryptedBin.byteLength);
 
             return verifyMAC(ivAndCiphertext, mac_key, mac, 32).then(function() {
-                if (theirDigest !== undefined) {
+                if (theirDigest !== null) {
                   return verifyDigest(encryptedBin, theirDigest);
                 }
             }).then(function() {
@@ -37968,10 +37958,13 @@ var TextSecureServer = (function() {
                 return new Promise(function(resolve, reject) {
                     var socket = getSocket();
                     socket.onclose = function(e) {
-                        console.log('websocket closed', e.code);
+                        console.log('provisioning socket closed', e.code);
                         if (!gotProvisionEnvelope) {
                             reject(new Error('websocket closed'));
                         }
+                    };
+                    socket.onopen = function(e) {
+                        console.log('provisioning socket open');
                     };
                     var wsr = new WebSocketResource(socket, {
                         keepalive: { path: '/v1/keepalive/provisioning' },
@@ -38222,7 +38215,6 @@ MessageReceiver.prototype.extend({
         if (this.socket && this.socket.readyState !== WebSocket.CLOSED) {
             this.socket.close();
         }
-        console.log('opening websocket');
         // initialize the socket and start listening for messages
         this.socket = this.server.getMessageSocket();
         this.socket.onclose = this.onclose.bind(this);
@@ -38263,8 +38255,13 @@ MessageReceiver.prototype.extend({
         // We do the message decryption here, instead of in the ordered pending queue,
         // to avoid exposing the time it took us to process messages through the time-to-ack.
 
-        // TODO: handle different types of requests. for now we blindly assume
-        // PUT /messages <encrypted Envelope>
+        // TODO: handle different types of requests.
+        if (request.path !== '/api/v1/message') {
+            console.log('got request', request.verb, request.path);
+            request.respond(200, 'OK');
+            return;
+        }
+
         textsecure.crypto.decryptWebsocketMessage(request.body, this.signalingKey).then(function(plaintext) {
             var envelope = textsecure.protobuf.Envelope.decode(plaintext);
             // After this point, decoding errors are not the server's
@@ -38539,12 +38536,16 @@ MessageReceiver.prototype.extend({
         return textsecure.storage.get('blocked', []).indexOf(number) >= 0;
     },
     handleAttachment: function(attachment) {
-        var digest = attachment.digest ? attachment.digest.toArrayBuffer() : undefined;
+        attachment.id = attachment.id.toString();
+        attachment.key = attachment.key.toArrayBuffer();
+        if (attachment.digest) {
+          attachment.digest = attachment.digest.toArrayBuffer();
+        }
         function decryptAttachment(encrypted) {
             return textsecure.crypto.decryptAttachment(
                 encrypted,
-                attachment.key.toArrayBuffer(),
-                digest
+                attachment.key,
+                attachment.digest
             );
         }
 
@@ -38552,7 +38553,7 @@ MessageReceiver.prototype.extend({
             attachment.data = data;
         }
 
-        return this.server.getAttachment(attachment.id.toString()).
+        return this.server.getAttachment(attachment.id).
         then(decryptAttachment).
         then(updateAttachment);
     },
@@ -39048,6 +39049,12 @@ MessageSender.prototype = {
                 proto.id = id;
                 proto.contentType = attachment.contentType;
                 proto.digest = result.digest;
+                if (attachment.fileName) {
+                    proto.fileName = attachment.fileName;
+                }
+                if (attachment.size) {
+                    proto.size = attachment.size;
+                }
                 return proto;
             });
         }.bind(this));

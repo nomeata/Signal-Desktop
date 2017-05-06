@@ -62,6 +62,25 @@
     "disconnected": {
       "message": "Disconnected"
     },
+    "connecting": {
+      "message": "Connecting"
+    },
+    "offline": {
+      "message": "Offline"
+    },
+    "checkNetworkConnection": {
+      "message": "Check your network connection.",
+      "description": "Obvious instructions for when a user's computer loses its network connection"
+    },
+    "attemptingReconnection": {
+      "message": "Attempting reconnect in $reconnect_duration_in_seconds$ seconds",
+      "placeholders": {
+        "reconnect_duration_in_seconds": {
+          "content": "$1",
+          "example": "10"
+        }
+      }
+    },
     "submitDebugLog": {
       "message": "Submit debug log",
       "description": "Menu item and header text for debug log modal, title case."
@@ -504,5 +523,14 @@
     "invalidNumberError": {
       "message": "Invalid number",
       "description": "When a person inputs a number that is invalid"
+    },
+    "unlinkedWarning": {
+        "message": "Relink Signal Desktop to your mobile device to continue messaging."
+    },
+    "unlinked": {
+        "message": "Unlinked"
+    },
+    "relink": {
+        "message": "Relink"
     }
 }

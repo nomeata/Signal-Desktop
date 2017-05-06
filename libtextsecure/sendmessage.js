@@ -124,6 +124,12 @@ MessageSender.prototype = {
                 proto.id = id;
                 proto.contentType = attachment.contentType;
                 proto.digest = result.digest;
+                if (attachment.fileName) {
+                    proto.fileName = attachment.fileName;
+                }
+                if (attachment.size) {
+                    proto.size = attachment.size;
+                }
                 return proto;
             });
         }.bind(this));

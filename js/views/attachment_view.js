@@ -4,16 +4,15 @@
 (function () {
   'use strict';
 
-  var FileView = Backbone.View.extend({
-      tagName: 'a',
-      initialize: function(dataUrl) {
-          this.dataUrl = dataUrl;
-          this.$el.text(i18n('unsupportedAttachment'));
-      },
-      render: function() {
-        this.$el.attr('href', this.dataUrl);
-        this.trigger('update');
-        return this;
+  var FileView = Whisper.View.extend({
+      tagName: 'div',
+      className: 'fileView',
+      templateName: 'file-view',
+      render_attributes: function() {
+        return {
+            fileName : this.model.fileName,
+            altText  : i18n('unsupportedAttachment')
+        };
       }
   });
 
@@ -58,6 +57,12 @@
   var AudioView = MediaView.extend({ tagName: 'audio' });
   var VideoView = MediaView.extend({ tagName: 'video' });
 
+  // Blacklist common file types known to be unsupported in Chrome
+  var UnsupportedFileTypes = [
+    'audio/aiff',
+    'video/quicktime'
+  ];
+
   Whisper.AttachmentView = Backbone.View.extend({
     tagName: 'span',
     className: 'attachment',
@@ -66,7 +71,6 @@
 
         var parts = this.model.contentType.split('/');
         this.contentType = parts[0];
-        this.fileType = parts[1];
         if (options.timestamp) {
           this.timestamp = options.timestamp;
         }
@@ -74,11 +78,14 @@
     events: {
         'click': 'onclick'
     },
+    getFileType: function() {
+        switch(this.model.contentType) {
+            case 'video/quicktime': return 'mov';
+            default: return this.model.contentType.split('/')[1];
+        }
+    },
     onclick: function(e) {
         switch (this.contentType) {
-            case 'audio':
-            case 'video':
-                return;
             case 'image':
                 var view = new Whisper.LightboxView({ model: this });
                 view.render();
@@ -87,16 +94,24 @@
                 break;
 
             default:
+                if (this.view instanceof MediaView) {
+                    return;
+                }
                 this.saveFile();
         }
     },
     suggestedName: function() {
+        if (this.model.fileName) {
+            return this.model.fileName;
+        }
+
         var suggestion = 'signal';
         if (this.timestamp) {
             suggestion += moment(this.timestamp).format('-YYYY-MM-DD-HHmmss');
         }
-        if (this.fileType) {
-            suggestion += '.' + this.fileType;
+        var fileType = this.getFileType();
+        if (fileType) {
+            suggestion += '.' + fileType;
         }
         return suggestion;
     },
@@ -125,18 +140,41 @@
         var View;
         switch(this.contentType) {
             case 'image': View = ImageView; break;
-            case 'audio': View = AudioView; break;
             case 'video': View = VideoView; break;
-            default     : View = FileView; break;
+            case 'audio': View = AudioView; break;
         }
+
+        if (!View || _.contains(UnsupportedFileTypes, this.model.contentType)) {
+            return this.renderFileView();
+        }
+
         if (!this.objectUrl) {
             this.objectUrl = window.URL.createObjectURL(this.blob);
         }
-        var view = new View(this.objectUrl, this.model.contentType);
-        view.$el.appendTo(this.$el);
-        view.on('update', this.trigger.bind(this, 'update'));
-        view.render();
+        this.view = new View(this.objectUrl, this.model.contentType);
+        this.view.$el.appendTo(this.$el);
+        this.listenTo(this.view, 'update', this.update);
+        this.view.render();
+        if (View !== ImageView) {
+          this.timeout = setTimeout(this.onTimeout.bind(this), 5000);
+        }
         return this;
+    },
+    onTimeout: function() {
+        // Image or media element failed to load. Fall back to FileView.
+        this.stopListening(this.view);
+        this.renderFileView();
+    },
+    renderFileView: function() {
+        this.view = new FileView({model: {fileName: this.suggestedName()}});
+        this.view.$el.appendTo(this.$el.empty());
+        this.view.render();
+        this.update();
+        return this;
+    },
+    update: function() {
+        clearTimeout(this.timeout);
+        this.trigger('update');
     }
   });
 
