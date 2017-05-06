@@ -127,6 +127,7 @@
                     'image/jpeg': '.jpg',
                     'image/png':  '.png',
                     'image/bmp':  '.bmp',
+                    'image/gif':  '.gif',
                     'audio/ogg':  '.ogg',
                     'audio/wav':  '.wav',
                     'audio/mpeg': '.mp3',
