@@ -2,11 +2,72 @@
     'use strict';
     window.Whisper = window.Whisper || {};
 
+    // Interface to write files to a zip file, using zip.js
+    // Seems to have trouble beyond 100MB
+    function ZipArchiveWriter() {
+	this.fileEntry = null;
+	this.writer = null;
+    }
+
+    ZipArchiveWriter.prototype = {
+	pickFilename: function (window, callback) {
+            window.chrome.fileSystem.chooseEntry( {
+                type: 'saveFile',
+                suggestedName: 'signal.zip',
+                  accepts: [ { description: 'Zip files (*.zip)',
+                               extensions: ['zip']} ],
+                  acceptsAllTypes: true
+                }, function(fileEntry) {
+		    this.fileEntry = fileEntry;
+		    callback();
+		}.bind(this));
+	},
+
+	init: function (callback) {
+            zip.workerScriptsPath = '/components/zip.js/WebContent/';
+            zip.createWriter(new zip.FileWriter(this.fileEntry,"application/zip"), function(writer) {
+              this.writer = writer;
+              callback();
+            }.bind(this),
+            function(currentIndex, totalIndex) {
+              // onprogress callback
+            }.bind(this),
+            function(err){
+		console.log('zip.js reports error:', err);
+	    }.bind(this));
+	},
+
+	add_blob: function (filename, blob, timestamp, callback) {
+	    timestamp = timestamp || new Date();
+	    console.log("blob size:", blob.size);
+	    console.log("zip.BlobReader...");
+	    var fileReader = new zip.BlobReader(blob);
+	    console.log("writing...");
+	    this.writer.add(
+		filename,
+		fileReader,
+		callback,
+		null, //progress
+		{ level: 0, lastModDate: timestamp }
+	    );
+	},
+
+	add_text: function (filename, text, callback) {
+	    this.writer.add(filename, new zip.TextReader(text), callback);
+	},
+
+	done: function(callback) {
+          this.writer.close(callback);
+	}
+
+    };
+
     function ExportArchive(options) {
         var id = options.conversation;
         this.conversation = new Whisper.Conversation({id: id});
         this.conversation.fetch();
         this.window = options.window;
+	this.archive_writer = new ZipArchiveWriter();
     }
 
     ExportArchive.prototype = {
@@ -27,28 +88,12 @@
 
         pickFilename: function() {return new Promise(function(resolve){
 	    console.log('pickFilename');
-            this.window.chrome.fileSystem.chooseEntry( {
-                type: 'saveFile',
-                suggestedName: 'signal.zip',
-                  accepts: [ { description: 'Zip files (*.zip)',
-                               extensions: ['zip']} ],
-                  acceptsAllTypes: true
-                }, resolve);
+	    this.archive_writer.pickFilename(this.window, resolve);
         }.bind(this));},
 
-        start_export: function (fileEntry) {return new Promise(function(resolve,reject){
+        start_export: function () {return new Promise(function(resolve,reject){
 	    console.log('start_export');
-            zip.workerScriptsPath = '/components/zip.js/WebContent/';
-            zip.createWriter(new zip.FileWriter(fileEntry,"application/zip"), function(writer) {
-              this.writer = writer;
-              resolve();
-            }.bind(this),
-            function(currentIndex, totalIndex) {
-              // onprogress callback
-            }.bind(this),
-            function(err){
-		console.log('zip.js reports error:', err);
-	    }.bind(this));
+	    this.archive_writer.init(resolve);
         }.bind(this));},
 
         add_static_files: function() {return new Promise(function(resolve,reject){
@@ -59,10 +104,7 @@
               {},
               function (fileEntry) {
                 fileEntry.file(function (blob) {
-                  this.writer.add(
-                    "stylesheets/manifest.css",
-                    new zip.BlobReader(blob),
-                    resolve);
+		    this.archive_writer.add_blob("stylesheets/manifest.css", blob, null, resolve);
                 }.bind(this));
               }.bind(this),
               reject
@@ -97,8 +139,8 @@
         },
 
         add_messages: function() {return new Promise(function(resolve,reject){
-	  console.log('add_messages');
-          this.writer.add("index.html", new zip.TextReader(this.conversation_source()), resolve);
+	    console.log('add_messages');
+	    this.archive_writer.add_text("index.html", this.conversation_source(), resolve);
         }.bind(this));},
 
         add_all_media: function() {return new Promise(function(resolve,reject){
@@ -124,24 +166,13 @@
 	  console.log('add_media', filename);
           var blob = new Blob([options.data], {type: options.contentType});
 	  console.log('blob created');
-          this.writer.add(
-            filename,
-            new zip.BlobReader(blob),
-            function () {
-		console.log('success, calling resolve');
-		resolve();
-	    },
-            function (x,y) {
-		console.log('progress',x,y);
-	    },
-            { level: 0,
-              lastModDate: new Date(options.timestamp)
-            });
+	  var timestamp = new Date(options.timestamp);
+	  this.archive_writer.add_blob(filename, blob, timestamp, resolve);
         },
 
         done: function() {return new Promise(function(resolve,reject){
 	  console.log('done');
-          this.writer.close(resolve);
+          this.archive_writer.done(resolve);
         }.bind(this));},
     };
 
