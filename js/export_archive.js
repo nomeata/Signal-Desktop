@@ -127,8 +127,13 @@
           this.writer.add(
             filename,
             new zip.BlobReader(blob),
-            resolve,
-            null, //progress
+            function () {
+		console.log('success, calling resolve');
+		resolve();
+	    },
+            function (x,y) {
+		console.log('progress',x,y);
+	    },
             { level: 0,
               lastModDate: new Date(options.timestamp)
             });
