@@ -14,9 +14,9 @@
             window.chrome.fileSystem.chooseEntry( {
                 type: 'saveFile',
                 suggestedName: 'signal.zip',
-                  accepts: [ { description: 'Zip files (*.zip)',
+                accepts: [ { description: 'Zip files (*.zip)',
                                extensions: ['zip']} ],
-                  acceptsAllTypes: true
+                acceptsAllTypes: true
                 }, function(fileEntry) {
 		    this.fileEntry = fileEntry;
 		    callback();
@@ -62,12 +62,104 @@
 
     };
 
+    // Interface to write files to a directory
+    function FileArchiveWriter() {
+	this.dirEntry = null;
+    }
+
+    FileArchiveWriter.prototype = {
+	pickFilename: function (window, callback) {
+	    console.log("FileArchiveWriter.pickFilename");
+	    // Need permissions here
+            window.chrome.fileSystem.chooseEntry( {
+                type: 'openDirectory',
+                // suggestedName: 'signal',
+                }, function(fileEntry) {
+		    if (fileEntry) {
+			this.dirEntry = fileEntry;
+			callback();
+		    } else {
+		        console.log("Could not open directory chooser");
+		    }
+		}.bind(this));
+	    /* Cannot write there, it seems
+	    chrome.runtime.getPackageDirectoryEntry(function (packageDir) {
+		console.log("packageDir", packageDir);
+		packageDir.getDirectory("archive",{create: true},
+		    function(dirEntry) {
+			this.dirEntry = dirEntry;
+			callback();
+		    }.bind(this),
+		    function(error) {
+			console.log("getDirectory failed", error);
+		    }.bind(this));
+	    }.bind(this));
+	    */
+	},
+
+	init: function (callback) {
+            callback();
+	},
+
+	openSubdirOf: function (dir, filename, callback) {
+	    var match = filename.match(/([^\/]*)\/(.*)/);
+	    if (match) {
+		var dirName = match[1];
+		var rest = match[2];
+		dir.getDirectory(dirName, {create:true}, function(dirEntry) {
+		    this.openSubdirOf(dirEntry, rest, callback);
+		}.bind(this));
+	    } else {
+		callback(dir, filename);
+	    }
+	},
+
+	add_blob: function (filename, blob, timestamp, callback) {
+	    this.openSubdirOf(this.dirEntry, filename, function (dir,basename) {
+		// Timestamps unsupported
+		// timestamp = timestamp || new Date();
+		var fileReader = new zip.BlobReader(blob);
+		dir.getFile(
+		    basename,
+		    {create: true},
+		    function(entry) {
+			entry.createWriter(function(fileWriter) {
+			    fileWriter.onwriteend = function(e) {
+				console.log("Done writing");
+				callback();
+			    };
+			    fileWriter.onerror = function(e) {
+				console.log('Write failed: ', e);
+			    };
+			    //fileWriter.seek(0);
+			    //fileWriter.truncate(0);
+			    fileWriter.write(blob);
+			}.bind(this));
+		    }.bind(this),
+		    function(error) {
+			console.log("getFile failed", error.toString());
+		    }
+		);
+	    }.bind(this));
+	},
+
+	add_text: function (filename, text, callback) {
+	    var blob = new Blob([text], {type: 'text/html'});
+	    this.add_blob(filename, blob, null, callback);
+	},
+
+	done: function(callback) {
+	  callback();
+	}
+
+    };
     function ExportArchive(options) {
         var id = options.conversation;
         this.conversation = new Whisper.Conversation({id: id});
         this.conversation.fetch();
         this.window = options.window;
-	this.archive_writer = new ZipArchiveWriter();
+	// this.archive_writer = new ZipArchiveWriter();
+	this.archive_writer = new FileArchiveWriter();
     }
 
     ExportArchive.prototype = {
