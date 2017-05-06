@@ -120,11 +120,12 @@
         }.bind(this));},
 
         add_media: function(options, resolve) {
-	  console.log('add_media', options.url);
+	  var filename = options.url.replace(/invalid:\/\//g,'');
+	  console.log('add_media', filename);
           var blob = new Blob([options.data], {type: options.contentType});
 	  console.log('blob created');
           this.writer.add(
-            options.url,
+            filename,
             new zip.BlobReader(blob),
             resolve,
             null, //progress
